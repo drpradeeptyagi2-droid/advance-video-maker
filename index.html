@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌟 Advanced AI Video Maker</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:0;}
+header{background:#1f1f1f;padding:15px;text-align:center;font-size:24px;}
+main{padding:20px;max-width:800px;margin:auto;}
+label{display:block;margin-top:15px;font-weight:bold;}
+input, select, textarea, button{width:100%;padding:10px;margin-top:5px;border-radius:5px;border:none;font-size:16px;}
+button{background:#FF4B2B;color:#fff;cursor:pointer;margin-top:15px;}
+video, img{width:100%;margin-top:15px;border-radius:10px;}
+</style>
+</head>
+<body>
+<header>🌟 Advanced AI Video Maker</header>
+<main>
+<label>Prompt (Text for Video)</label>
+<textarea id="prompt" rows="3" placeholder="Enter video idea"></textarea>
+
+<label>Language</label>
+<select id="language">
+<option value="en">English</option>
+<option value="hi">Hindi</option>
+</select>
+
+<label>Duration (Seconds)</label>
+<input type="number" id="duration" value="30">
+
+<label>Aspect Ratio</label>
+<select id="aspect">
+<option value="9:16">9:16</option>
+<option value="16:9">16:9</option>
+</select>
+
+<button id="generate">Generate Video</button>
+
+<video id="videoPreview" controls></video>
+<img id="thumbnailPreview" alt="Thumbnail Preview">
+</main>
+
+<script>
+// 🌟 Simple Offline AI Demo (Text → Video + Voice)
+function generateScript(prompt, lang){
+    const hooks_hi = ["स्क्रॉल बंद करो—ये आपकी गेम बदल देगा.","ये ट्रिक किसी ने नहीं बताई… अब जानो.","अगर ये मुश्किल लगता है, ध्यान से देखो."];
+    const hooks_en = ["Stop scrolling—this will change your game.","Nobody told you this hack… until now.","If you struggle with this, watch closely."];
+    const cta_hi = ["ऐसे और टिप्स के लिए फॉलो करें और शेयर करें!"];
+    const cta_en = ["Follow for more, and share this with a friend!"];
+    let hook = lang==='hi'? hooks_hi[Math.floor(Math.random()*hooks_hi.length)] : hooks_en[Math.floor(Math.random()*hooks_en.length)];
+    let cta = lang==='hi'? cta_hi[0] : cta_en[0];
+    return hook + "\n" + prompt + "\n" + cta;
+}
+
+function ttsOffline(text, lang){
+    // Offline TTS using SpeechSynthesis
+    return new Promise((resolve)=>{
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = lang==='hi'? 'hi-IN':'en-US';
+        speechSynthesis.speak(utter);
+        resolve();
+    });
+}
+
+function generateThumbnail(prompt){
+    const canvas = document.createElement('canvas');
+    canvas.width = 1280; canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FF4B2B';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 80px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(prompt.split(" ").slice(0,5).join(" "),canvas.width/2,canvas.height/2);
+    return canvas.toDataURL('image/png');
+}
+
+document.getElementById('generate').addEventListener('click', async ()=>{
+    const prompt = document.getElementById('prompt').value;
+    const lang = document.getElementById('language').value;
+    const duration = parseInt(document.getElementById('duration').value);
+    const aspect = document.getElementById('aspect').value;
+
+    if(!prompt){alert("Please enter a prompt"); return;}
+
+    const script = generateScript(prompt,lang);
+    console.log("Script:\n",script);
+
+    // Generate Thumbnail
+    const thumb = generateThumbnail(prompt);
+    document.getElementById('thumbnailPreview').src = thumb;
+
+    // Generate Offline Video (simple colored clip + text overlay)
+    const canvas = document.createElement('canvas');
+    canvas.width = aspect==='9:16'? 1080:1920;
+    canvas.height = aspect==='9:16'? 1920:1080;
+    const ctx = canvas.getContext('2d');
+
+    let t = 0;
+    const fps = 30;
+    const totalFrames = duration*fps;
+    const frames = [];
+    for(let i=0;i<totalFrames;i++){
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 60px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(script.split("\n")[0],canvas.width/2,canvas.height/2);
+        frames.push(canvas.toDataURL('image/webp'));
+    }
+
+    const videoEl = document.getElementById('videoPreview');
+    // Simple frame animation
+    let idx=0;
+    const streamCanvas = document.createElement('canvas');
+    streamCanvas.width = canvas.width; streamCanvas.height = canvas.height;
+    const streamCtx = streamCanvas.getContext('2d');
+    videoEl.src = '';
+    const mediaStream = streamCanvas.captureStream(fps);
+    videoEl.srcObject = mediaStream;
+    videoEl.play();
+    function drawFrame(){
+        const img = new Image();
+        img.src = frames[idx];
+        img.onload=()=>{
+            streamCtx.drawImage(img,0,0);
+        }
+        idx++; if(idx<frames.length) requestAnimationFrame(drawFrame);
+    }
+    drawFrame();
+
+    // TTS
+    await ttsOffline(script,lang);
+});
+</script>
+</body>
+</html>
